@@ -143,3 +143,106 @@ This will:
 - **Quality vs Speed**: Higher `--total-step` values produce better quality but take longer
 - **GPU Support**: GPU mode is not supported yet
 
+---
+
+## OpenAI-Compatible API
+
+An OpenAI-compatible REST API is available for easy integration with existing tools and applications.
+
+### Running the API Server
+
+```bash
+cd supertonic/py
+pip install fastapi uvicorn faster-whisper
+python api.py
+# Or: uvicorn api:app --host 0.0.0.0 --port 8000
+```
+
+### TTS Endpoints
+
+#### POST `/v1/audio/speech` - Text-to-Speech
+
+Main TTS endpoint matching OpenAI's API format.
+
+**Request body:**
+```json
+{
+  "model": "tts-1",
+  "input": "Hello, world!",
+  "voice": "alloy",
+  "response_format": "wav",
+  "speed": 1.0,
+  "language": "en"
+}
+```
+
+**Voice mapping (OpenAI-style → internal):**
+
+| OpenAI Voice | Internal Voice |
+|--------------|----------------|
+| alloy | M1 |
+| echo | M2 |
+| fable | M3 |
+| onyx | M4 |
+| nova | F1 |
+| shimmer | F2 |
+
+Direct voice names also work: `M1`-`M5`, `F1`-`F5`
+
+**Example:**
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Hello world", "voice": "nova"}' \
+  --output speech.wav
+```
+
+#### GET `/v1/audio/voices` - List Available Voices
+
+Returns all available voice options.
+
+#### GET `/v1/audio/languages` - List Supported Languages
+
+Supported languages: `en`, `ko`, `es`, `pt`, `fr`
+
+### STT Endpoints
+
+#### POST `/v1/audio/transcriptions` - Transcribe Audio
+
+Transcribe audio to text using Whisper.
+
+**Request (multipart form):**
+```bash
+curl -X POST http://localhost:8000/v1/audio/transcriptions \
+  -F file=@audio.mp3 \
+  -F model=whisper-1 \
+  -F language=en \
+  -F response_format=json
+```
+
+**Response formats:**
+
+| Format | Description |
+|--------|-------------|
+| `json` | `{"text": "transcribed text"}` |
+| `text` | Plain text |
+| `verbose_json` | Includes segments with timestamps |
+| `srt` | SubRip subtitle format |
+| `vtt` | WebVTT subtitle format |
+
+#### POST `/v1/audio/translations` - Translate Audio to English
+
+Translate audio from any supported language to English text.
+
+### Health Check
+
+#### GET `/health`
+
+Returns server health status.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WHISPER_MODEL_SIZE` | `small` | Whisper model size. Options: `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3` |
+
