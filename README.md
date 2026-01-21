@@ -1,3 +1,113 @@
+## OpenAI-Compatible API
+
+An OpenAI-compatible REST API is available for easy integration with existing tools and applications.
+
+### Running the API Server
+
+```bash
+cd supertonic/py
+pip install fastapi uvicorn faster-whisper
+python api.py
+# Or: uvicorn api:app --host 0.0.0.0 --port 8000
+```
+
+### TTS Endpoints
+
+#### POST `/v1/audio/speech` - Text-to-Speech
+
+Main TTS endpoint matching OpenAI's API format.
+
+**Request body:**
+
+```json
+{
+  "model": "tts-1",
+  "input": "Hello, world!",
+  "voice": "alloy",
+  "response_format": "wav",
+  "speed": 1.0,
+  "language": "en"
+}
+```
+
+**Voice mapping (OpenAI-style → internal):**
+
+| OpenAI Voice | Internal Voice |
+| ------------ | -------------- |
+| alloy        | M1             |
+| echo         | M2             |
+| fable        | M3             |
+| onyx         | M4             |
+| nova         | F1             |
+| shimmer      | F2             |
+
+Direct voice names also work: `M1`-`M5`, `F1`-`F5`
+
+**Example:**
+
+```bash
+curl -X POST http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Hello world", "voice": "nova"}' \
+  --output speech.wav
+```
+
+#### GET `/v1/audio/voices` - List Available Voices
+
+Returns all available voice options.
+
+#### GET `/v1/audio/languages` - List Supported Languages
+
+Supported languages: `en`, `ko`, `es`, `pt`, `fr`
+
+### STT Endpoints
+
+#### POST `/v1/audio/transcriptions` - Transcribe Audio
+
+Transcribe audio to text using Whisper.
+
+**Request (multipart form):**
+
+```bash
+curl -X POST http://localhost:8000/v1/audio/transcriptions \
+  -F file=@audio.mp3 \
+  -F model=whisper-1 \
+  -F language=en \
+  -F response_format=json
+```
+
+**Response formats:**
+
+| Format         | Description                       |
+| -------------- | --------------------------------- |
+| `json`         | `{"text": "transcribed text"}`    |
+| `text`         | Plain text                        |
+| `verbose_json` | Includes segments with timestamps |
+| `srt`          | SubRip subtitle format            |
+| `vtt`          | WebVTT subtitle format            |
+
+#### POST `/v1/audio/translations` - Translate Audio to English
+
+Translate audio from any supported language to English text.
+
+### Health Check
+
+#### GET `/health`
+
+Returns server health status.
+
+### Environment Variables
+
+| Variable             | Default | Description                                                                            |
+| -------------------- | ------- | -------------------------------------------------------------------------------------- |
+| `WHISPER_MODEL_SIZE` | `small` | Whisper model size. Options: `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3` |
+
+---
+
+---
+
+---
+
 # TTS ONNX Inference Examples
 
 This guide provides examples for running TTS inference using `example_onnx.py`.
@@ -23,16 +133,19 @@ This guide provides examples for running TTS inference using `example_onnx.py`.
 This project uses [uv](https://docs.astral.sh/uv/) for fast package management.
 
 ### Install uv (if not already installed)
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 ### Install dependencies
+
 ```bash
 uv sync
 ```
 
 Or if you prefer using traditional pip with requirements.txt:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -40,12 +153,15 @@ pip install -r requirements.txt
 ## Basic Usage
 
 ### Example 1: Default Inference
+
 Run inference with default settings:
+
 ```bash
 uv run example_onnx.py
 ```
 
 This will use:
+
 - Voice style: `assets/voice_styles/M1.json`
 - Text: "This morning, I took a walk in the park, and the sound of the birds and the breeze was so pleasant that I stopped for a long time just to listen."
 - Output directory: `results/`
@@ -53,7 +169,9 @@ This will use:
 - Number of generations: 4
 
 ### Example 2: Batch Inference
+
 Process multiple voice styles and texts at once:
+
 ```bash
 uv run example_onnx.py \
   --voice-style assets/voice_styles/M1.json assets/voice_styles/F1.json \
@@ -63,6 +181,7 @@ uv run example_onnx.py \
 ```
 
 This will:
+
 - Use `--batch` flag to enable batch processing mode
 - Generate speech for 2 different voice-text pairs
 - Use male voice style (M1.json) for the first English text
@@ -70,7 +189,9 @@ This will:
 - Process both samples in a single batch (automatic text chunking disabled)
 
 ### Example 3: High Quality Inference
+
 Increase denoising steps for better quality:
+
 ```bash
 uv run example_onnx.py \
   --total-step 10 \
@@ -79,11 +200,14 @@ uv run example_onnx.py \
 ```
 
 This will:
+
 - Use 10 denoising steps instead of the default 5
 - Produce higher quality output at the cost of slower inference
 
 ### Example 4: Long-Form Inference
+
 For long texts, the system automatically chunks the text into manageable segments and generates a single audio file:
+
 ```bash
 uv run example_onnx.py \
   --voice-style assets/voice_styles/M1.json \
@@ -91,6 +215,7 @@ uv run example_onnx.py \
 ```
 
 This will:
+
 - Automatically split the long text into smaller chunks (max 300 characters by default)
 - Process each chunk separately while maintaining natural speech flow
 - Insert brief silences (0.3 seconds) between chunks for natural pacing
@@ -99,7 +224,9 @@ This will:
 **Note**: When using batch mode (`--batch`), automatic text chunking is disabled. Use non-batch mode for long-form text synthesis.
 
 ### Example 5: Adjusting Speech Speed
+
 Control the speed of speech synthesis:
+
 ```bash
 # Faster speech (speed > 1.0)
 uv run example_onnx.py \
@@ -115,6 +242,7 @@ uv run example_onnx.py \
 ```
 
 This will:
+
 - Use `--speed 1.2` to generate faster speech
 - Use `--speed 0.9` to generate slower speech
 - Default speed is 1.05 if not specified
@@ -122,18 +250,18 @@ This will:
 
 ## Available Arguments
 
-| Argument | Type | Default | Description |
-|----------|------|---------|-------------|
-| `--use-gpu` | flag | False | Use GPU for inference (with CPU fallback) |
-| `--onnx-dir` | str | `assets/onnx` | Path to ONNX model directory |
-| `--total-step` | int | 5 | Number of denoising steps (higher = better quality, slower) |
-| `--speed` | float | 1.05 | Speech speed factor (higher = faster, lower = slower) |
-| `--n-test` | int | 4 | Number of times to generate each sample |
-| `--voice-style` | str+ | `assets/voice_styles/M1.json` | Voice style file path(s) |
-| `--text` | str+ | (long default text) | Text(s) to synthesize |
-| `--lang` | str+ | `en` | Language(s) for text(s): `en`, `ko`, `es`, `pt`, `fr` |
-| `--save-dir` | str | `results` | Output directory |
-| `--batch` | flag | False | Enable batch mode (disables automatic text chunking) |
+| Argument        | Type  | Default                       | Description                                                 |
+| --------------- | ----- | ----------------------------- | ----------------------------------------------------------- |
+| `--use-gpu`     | flag  | False                         | Use GPU for inference (with CPU fallback)                   |
+| `--onnx-dir`    | str   | `assets/onnx`                 | Path to ONNX model directory                                |
+| `--total-step`  | int   | 5                             | Number of denoising steps (higher = better quality, slower) |
+| `--speed`       | float | 1.05                          | Speech speed factor (higher = faster, lower = slower)       |
+| `--n-test`      | int   | 4                             | Number of times to generate each sample                     |
+| `--voice-style` | str+  | `assets/voice_styles/M1.json` | Voice style file path(s)                                    |
+| `--text`        | str+  | (long default text)           | Text(s) to synthesize                                       |
+| `--lang`        | str+  | `en`                          | Language(s) for text(s): `en`, `ko`, `es`, `pt`, `fr`       |
+| `--save-dir`    | str   | `results`                     | Output directory                                            |
+| `--batch`       | flag  | False                         | Enable batch mode (disables automatic text chunking)        |
 
 ## Notes
 
@@ -144,105 +272,3 @@ This will:
 - **GPU Support**: GPU mode is not supported yet
 
 ---
-
-## OpenAI-Compatible API
-
-An OpenAI-compatible REST API is available for easy integration with existing tools and applications.
-
-### Running the API Server
-
-```bash
-cd supertonic/py
-pip install fastapi uvicorn faster-whisper
-python api.py
-# Or: uvicorn api:app --host 0.0.0.0 --port 8000
-```
-
-### TTS Endpoints
-
-#### POST `/v1/audio/speech` - Text-to-Speech
-
-Main TTS endpoint matching OpenAI's API format.
-
-**Request body:**
-```json
-{
-  "model": "tts-1",
-  "input": "Hello, world!",
-  "voice": "alloy",
-  "response_format": "wav",
-  "speed": 1.0,
-  "language": "en"
-}
-```
-
-**Voice mapping (OpenAI-style → internal):**
-
-| OpenAI Voice | Internal Voice |
-|--------------|----------------|
-| alloy | M1 |
-| echo | M2 |
-| fable | M3 |
-| onyx | M4 |
-| nova | F1 |
-| shimmer | F2 |
-
-Direct voice names also work: `M1`-`M5`, `F1`-`F5`
-
-**Example:**
-```bash
-curl -X POST http://localhost:8000/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{"input": "Hello world", "voice": "nova"}' \
-  --output speech.wav
-```
-
-#### GET `/v1/audio/voices` - List Available Voices
-
-Returns all available voice options.
-
-#### GET `/v1/audio/languages` - List Supported Languages
-
-Supported languages: `en`, `ko`, `es`, `pt`, `fr`
-
-### STT Endpoints
-
-#### POST `/v1/audio/transcriptions` - Transcribe Audio
-
-Transcribe audio to text using Whisper.
-
-**Request (multipart form):**
-```bash
-curl -X POST http://localhost:8000/v1/audio/transcriptions \
-  -F file=@audio.mp3 \
-  -F model=whisper-1 \
-  -F language=en \
-  -F response_format=json
-```
-
-**Response formats:**
-
-| Format | Description |
-|--------|-------------|
-| `json` | `{"text": "transcribed text"}` |
-| `text` | Plain text |
-| `verbose_json` | Includes segments with timestamps |
-| `srt` | SubRip subtitle format |
-| `vtt` | WebVTT subtitle format |
-
-#### POST `/v1/audio/translations` - Translate Audio to English
-
-Translate audio from any supported language to English text.
-
-### Health Check
-
-#### GET `/health`
-
-Returns server health status.
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `WHISPER_MODEL_SIZE` | `small` | Whisper model size. Options: `tiny`, `base`, `small`, `medium`, `large-v2`, `large-v3` |
-
