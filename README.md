@@ -2,13 +2,29 @@
 
 An OpenAI-compatible REST API is available for easy integration with existing tools and applications.
 
+### Download Assets
+
+Download the required models from Hugging Face:
+
+```bash
+pip install huggingface_hub
+
+# Download ONNX models
+huggingface-cli download Supertone/supertonic-2 onnx --local-dir assets
+
+# Download voice styles
+huggingface-cli download Supertone/supertonic voice_styles --local-dir assets
+```
+
+Models: [Supertone/supertonic-2](https://huggingface.co/Supertone/supertonic-2)
+
 ### Running the API Server
 
 ```bash
 cd py-tts-api
-pip install fastapi uvicorn faster-whisper
+pip install -r requirements.txt
 python api.py
-# Or: uvicorn api:app --host 0.0.0.0 --port 8000
+# Or: uvicorn api:app --host 0.0.0.0 --port 8005
 ```
 
 ### TTS Endpoints
