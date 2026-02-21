@@ -4,19 +4,26 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsndfile1 \
     ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    git \
+    git-lfs \
+    && rm -rf /var/lib/apt/lists/* \
+    && git lfs install
 
 WORKDIR /app
 
 # Copy requirements first for better layer caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt huggingface_hub
+
+# Download models from Hugging Face
+RUN python -c "from huggingface_hub import snapshot_download; \
+    snapshot_download('Supertone/supertonic-2', local_dir='assets/onnx', allow_patterns=['*.onnx', '*.json']); \
+    snapshot_download('Supertone/supertonic', local_dir='assets/voice_styles_tmp', allow_patterns=['voice_styles/*.json'])" \
+    && mv assets/voice_styles_tmp/voice_styles assets/voice_styles \
+    && rm -rf assets/voice_styles_tmp
 
 # Copy application code
 COPY api.py helper.py ./
-
-# Assets (models and voice styles) should be mounted as a volume
-# They are gitignored due to large size (~260MB)
 
 # Environment variables with defaults
 ENV ONNX_DIR=assets/onnx
