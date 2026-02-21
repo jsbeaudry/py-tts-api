@@ -8,8 +8,8 @@ services:
       - VOICE_STYLES_DIR=assets/voice_styles
       - USE_GPU=false
       - WHISPER_MODEL_SIZE=tiny
-    # volumes:
-    #   - ./assets:/app/assets:ro  # Optional: mount assets from host
+    volumes:
+      - ./assets:/app/assets:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/health')"]

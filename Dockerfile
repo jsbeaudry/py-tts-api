@@ -15,8 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY api.py helper.py ./
 
-# Copy assets (models and voice styles)
-COPY assets/ ./assets/
+# Assets (models and voice styles) should be mounted as a volume
+# They are gitignored due to large size (~260MB)
 
 # Environment variables with defaults
 ENV ONNX_DIR=assets/onnx
