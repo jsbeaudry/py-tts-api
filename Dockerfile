@@ -15,16 +15,15 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt huggingface_hub
 
-# Download models from Hugging Face
-# supertonic-2 has onnx/ subdirectory, supertonic has voice_styles/ subdirectory
-RUN python -c "from huggingface_hub import snapshot_download; \
-    snapshot_download('Supertone/supertonic-2', local_dir='hf_tmp/supertonic2'); \
-    snapshot_download('Supertone/supertonic', local_dir='hf_tmp/supertonic')" \
+# Download models from Hugging Face using git clone to ensure LFS files are fetched
+RUN git clone https://huggingface.co/Supertone/supertonic-2 hf_tmp/supertonic2 \
+    && git clone https://huggingface.co/Supertone/supertonic hf_tmp/supertonic \
     && mkdir -p assets \
     && mv hf_tmp/supertonic2/onnx assets/onnx \
     && mv hf_tmp/supertonic/voice_styles assets/voice_styles \
     && rm -rf hf_tmp \
-    && ls -la assets/onnx && ls -la assets/voice_styles
+    && echo "=== ONNX files ===" && ls -lh assets/onnx/*.onnx \
+    && echo "=== Voice styles ===" && ls -la assets/voice_styles/
 
 # Copy application code
 COPY api.py helper.py ./
