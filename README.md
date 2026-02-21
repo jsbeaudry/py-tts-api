@@ -5,7 +5,7 @@ An OpenAI-compatible REST API is available for easy integration with existing to
 ### Running the API Server
 
 ```bash
-cd supertonic/py
+cd py-tts-api
 pip install fastapi uvicorn faster-whisper
 python api.py
 # Or: uvicorn api:app --host 0.0.0.0 --port 8000

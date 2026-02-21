@@ -1,0 +1,45 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Egg info
+*.egg-info/
+*.egg
+
+# Build artifacts
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Test results
+results/
+
+# Lock files (not needed in container)
+uv.lock
+
+# Example files
+example_*.py
+
+# Documentation
+README.md

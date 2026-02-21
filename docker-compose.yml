@@ -1,0 +1,19 @@
+services:
+  tts-api:
+    build: .
+    ports:
+      - "8005:8005"
+    environment:
+      - ONNX_DIR=assets/onnx
+      - VOICE_STYLES_DIR=assets/voice_styles
+      - USE_GPU=false
+      - WHISPER_MODEL_SIZE=tiny
+    # volumes:
+    #   - ./assets:/app/assets:ro  # Optional: mount assets from host
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3

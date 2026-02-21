@@ -48,7 +48,7 @@ voice_styles = {}
 whisper_model = None
 
 # STT Configuration
-WHISPER_MODEL_SIZE = os.environ.get("WHISPER_MODEL_SIZE", "small")
+WHISPER_MODEL_SIZE = os.environ.get("WHISPER_MODEL_SIZE", "tiny")
 # deepdml/faster-whisper-large-v3-turbo-ct2
 # samll
 
@@ -116,11 +116,10 @@ async def startup_event():
 
 def get_voice_style(voice: str):
     """Get the voice style by name, supporting both OpenAI-style and direct names."""
-    # Check if it's an OpenAI-style voice name
-    try:
-        voice_enum = Voice(voice)
-        voice_id = voice_enum.value
-    except ValueError:
+    # Check if it's an OpenAI-style voice name (lookup by enum name, not value)
+    if voice.lower() in Voice.__members__:
+        voice_id = Voice[voice.lower()].value
+    else:
         # Try direct voice name (M1, F1, etc.)
         voice_id = voice.upper()
 
@@ -177,7 +176,14 @@ async def create_speech(request: TTSRequest):
         buffer = io.BytesIO()
 
         if request.response_format == ResponseFormat.wav:
-            sf.write(buffer, wav_trimmed, text_to_speech.sample_rate, format="WAV")
+            # Write to temp file first (same as debug), then read back
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                sf.write(tmp.name, wav_trimmed, text_to_speech.sample_rate)
+                tmp_path = tmp.name
+            with open(tmp_path, "rb") as f:
+                buffer.write(f.read())
+            os.unlink(tmp_path)
             media_type = "audio/wav"
         elif request.response_format == ResponseFormat.flac:
             sf.write(buffer, wav_trimmed, text_to_speech.sample_rate, format="FLAC")
@@ -185,7 +191,19 @@ async def create_speech(request: TTSRequest):
         elif request.response_format == ResponseFormat.pcm:
             # Raw PCM (24kHz, 16-bit signed little-endian) - OpenAI TTS format
             import numpy as np
-            pcm_data = (wav_trimmed * 32767).astype(np.int16)
+
+            # Resample to 24kHz if needed (OpenAI PCM standard)
+            target_rate = 24000
+            if text_to_speech.sample_rate != target_rate:
+                num_samples = int(len(wav_trimmed) * target_rate / text_to_speech.sample_rate)
+                x_old = np.linspace(0, 1, len(wav_trimmed))
+                x_new = np.linspace(0, 1, num_samples)
+                wav_resampled = np.interp(x_new, x_old, wav_trimmed).astype(np.float32)
+                logger.info(f"Resampled from {text_to_speech.sample_rate}Hz to {target_rate}Hz")
+            else:
+                wav_resampled = wav_trimmed
+
+            pcm_data = (wav_resampled * 32767).astype(np.int16)
             buffer.write(pcm_data.tobytes())
             media_type = "audio/pcm"
         else:
